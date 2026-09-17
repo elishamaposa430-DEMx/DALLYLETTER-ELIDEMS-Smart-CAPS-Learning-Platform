@@ -1,25 +1,22 @@
 {
-  "name": "DALLYLETTER ELIDEMS",
+  "name": "DALLYLETTER ELIDEMS Codespace",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
-  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "workspaceFolder": "/workspaces",
   "shutdownAction": "stopCompose",
-  "forwardPorts": [4000, 5173, 5432],
+  "remoteUser": "node",
+  "forwardPorts": [4000, 5173],
   "portsAttributes": {
     "4000": {
-      "label": "API server",
+      "label": "DALLYLETTER API",
       "onAutoForward": "notify"
     },
     "5173": {
-      "label": "Vite web app",
+      "label": "DALLYLETTER web app",
       "onAutoForward": "openBrowser"
-    },
-    "5432": {
-      "label": "PostgreSQL",
-      "onAutoForward": "ignore"
     }
   },
-  "postCreateCommand": "bash -lc 'cp -n .env.example .env && python - <<\"PY\"\nfrom pathlib import Path\np = Path(\".env\")\ntext = p.read_text()\ntext = text.replace(\"DATABASE_URL=postgresql://postgres:postgres@localhost:5432/dallyletter\", \"DATABASE_URL=postgresql://postgres:postgres@postgres:5432/dallyletter\")\ntext = text.replace(\"CORS_ORIGINS=http://localhost:5173,http://localhost:3000\", \"CORS_ORIGINS=http://localhost:5173,http://localhost:3000,https://*--5173.*.app.github.dev\")\np.write_text(text)\nPY\n pnpm install && pnpm --filter @workspace/db run push'",
+  "postCreateCommand": "pnpm install --frozen-lockfile && if [ ! -f .env ]; then cp .env.example .env; fi && sed -i 's#postgresql://postgres:postgres@localhost:5432/dallyletter#postgresql://postgres:postgres@postgres:5432/dallyletter#' .env",
   "customizations": {
     "vscode": {
       "extensions": [
