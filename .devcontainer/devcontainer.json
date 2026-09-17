@@ -2,7 +2,7 @@
   "name": "DALLYLETTER ELIDEMS Codespace",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
-  "workspaceFolder": "/workspaces",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "shutdownAction": "stopCompose",
   "remoteUser": "node",
   "forwardPorts": [4000, 5173],
@@ -16,7 +16,8 @@
       "onAutoForward": "openBrowser"
     }
   },
-  "postCreateCommand": "pnpm install --frozen-lockfile && if [ ! -f .env ]; then cp .env.example .env; fi && sed -i 's#postgresql://postgres:postgres@localhost:5432/dallyletter#postgresql://postgres:postgres@postgres:5432/dallyletter#' .env",
+  "postCreateCommand": "bash -lc 'if [ ! -f .env ]; then cp .env.example .env; fi; sed -i \"s#postgresql://postgres:postgres@localhost:5432/dallyletter#postgresql://postgres:postgres@postgres:5432/dallyletter#\" .env; corepack enable; pnpm install --frozen-lockfile'",
+  "postStartCommand": "bash .devcontainer/start.sh",
   "customizations": {
     "vscode": {
       "extensions": [
