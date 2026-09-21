@@ -1,62 +1,41 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { AuthenticatedMedia } from "@/components/AuthenticatedMedia";
 import { useListLessons } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Loader2, Search, FileText, Image as ImageIcon, Video, Headphones, BookOpen, ExternalLink, GraduationCap } from "lucide-react";
-
-function YouTubeEmbed({ url, title }: { url: string; title: string }) {
-  return <iframe className="aspect-video w-full rounded-md" src={url} title={title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />;
-}
-
-function StoredMedia({ url, type, title }: { url: string; type: string; title: string }) {
-  const [objectUrl, setObjectUrl] = useState<string | null>(null);
-  const [mediaType, setMediaType] = useState("");
-  useEffect(() => {
-    let active = true;
-    const token = localStorage.getItem("dallyletter_token");
-    fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
-      .then((response) => {
-        if (!response.ok) throw new Error("Media unavailable");
-        return response.blob();
-      })
-      .then((blob) => { if (active) { setMediaType(blob.type); setObjectUrl(URL.createObjectURL(blob)); } })
-      .catch(() => setObjectUrl(null));
-    return () => { active = false; };
-  }, [url]);
-
-  if (!objectUrl) return <div className="flex aspect-video items-center justify-center rounded-md bg-muted text-sm text-muted-foreground">Loading media...</div>;
-  if (type === "video") return <video className="aspect-video w-full rounded-md bg-black" src={objectUrl} title={title} controls />;
-  if (type === "audio") return <audio className="w-full" src={objectUrl} title={title} controls />;
-  if (mediaType === "application/pdf") return <iframe className="h-64 w-full rounded-md border" src={objectUrl} title={title} />;
-  if (type === "notes") return <a className="text-sm font-medium text-primary underline" href={objectUrl} download>Download {title}</a>;
-  return <img className="max-h-64 w-full rounded-md object-contain" src={objectUrl} alt={title} />;
-}
 
 export default function StudentLessons() {
   const { data: lessons, isLoading } = useListLessons();
   const [search, setSearch] = useState("");
   const [subjectFilter, setSubjectFilter] = useState("all");
 
-  const filteredLessons = lessons?.filter(lesson => {
-    const matchesSearch = lesson.title.toLowerCase().includes(search.toLowerCase()) ||
-                          (lesson.description?.toLowerCase().includes(search.toLowerCase()));
+  const filteredLessons = lessons?.filter((lesson) => {
+    const matchesSearch =
+      lesson.title.toLowerCase().includes(search.toLowerCase()) ||
+      lesson.description?.toLowerCase().includes(search.toLowerCase());
     const matchesSubject = subjectFilter === "all" || lesson.subject === subjectFilter;
     return matchesSearch && matchesSubject;
   });
 
-  const subjects = Array.from(new Set(lessons?.map(l => l.subject) || []));
+  const subjects = Array.from(new Set(lessons?.map((l) => l.subject) || []));
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case "video": return <Video className="h-4 w-4" />;
-      case "image": return <ImageIcon className="h-4 w-4" />;
-      case "audio": return <Headphones className="h-4 w-4" />;
-      case "notes": return <FileText className="h-4 w-4" />;
-      default: return <BookOpen className="h-4 w-4" />;
+      case "video":
+        return <Video className="h-4 w-4" />;
+      case "image":
+        return <ImageIcon className="h-4 w-4" />;
+      case "audio":
+        return <Headphones className="h-4 w-4" />;
+      case "notes":
+        return <FileText className="h-4 w-4" />;
+      default:
+        return <BookOpen className="h-4 w-4" />;
     }
   };
 
@@ -74,13 +53,9 @@ export default function StudentLessons() {
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  const isYouTubeUrl = (url: string) => url.includes("youtube.com/embed/");
-
   return (
     <DashboardLayout>
       <div className="space-y-6">
-
-        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Lessons</h1>
@@ -92,7 +67,6 @@ export default function StudentLessons() {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -109,14 +83,13 @@ export default function StudentLessons() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Subjects</SelectItem>
-              {subjects.map(sub => (
+              {subjects.map((sub) => (
                 <SelectItem key={sub} value={sub}>{sub}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
-        {/* Lessons Grid */}
         {isLoading ? (
           <div className="flex justify-center p-16">
             <div className="text-center space-y-3">
@@ -136,11 +109,9 @@ export default function StudentLessons() {
               filteredLessons?.map((lesson) => (
                 <Card
                   key={lesson.id}
-                  className={`flex flex-col h-full transition-all duration-200 border hover:shadow-lg hover:-translate-y-0.5 ${lesson.mediaUrl ? "hover:border-primary/60 cursor-pointer" : "hover:border-border/80"}`}
-                  onClick={() => lesson.mediaUrl && !lesson.mediaUrl.startsWith("/api/lessons/media/") && !isYouTubeUrl(lesson.mediaUrl) && handleOpen(lesson.mediaUrl)}
+                  className="flex flex-col h-full transition-all duration-200 border hover:shadow-lg hover:-translate-y-0.5"
                 >
                   <CardHeader className="pb-3 space-y-3">
-                    {/* Top row: subject + type */}
                     <div className="flex items-center justify-between gap-2">
                       <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-medium">
                         {lesson.subject}
@@ -151,40 +122,39 @@ export default function StudentLessons() {
                       </span>
                     </div>
 
-                    {/* Title */}
                     <div>
-                      {lesson.mediaUrl ? (
-                        <h3 className="font-bold text-lg leading-tight text-primary hover:underline flex items-start gap-1.5 group line-clamp-2">
-                          {lesson.title}
-                          <ExternalLink className="h-3.5 w-3.5 shrink-0 mt-1 opacity-60 group-hover:opacity-100" />
-                        </h3>
-                      ) : (
-                        <h3 className="font-bold text-lg leading-tight text-foreground line-clamp-2">
-                          {lesson.title}
-                        </h3>
-                      )}
+                      <h3 className="font-bold text-lg leading-tight text-foreground line-clamp-2">
+                        {lesson.title}
+                      </h3>
                       <p className="text-xs text-muted-foreground mt-1">by {lesson.teacherName}</p>
                     </div>
                   </CardHeader>
 
                   <CardContent className="flex-1 flex flex-col justify-between gap-4">
-                    {lesson.mediaUrl && (isYouTubeUrl(lesson.mediaUrl) ? <YouTubeEmbed url={lesson.mediaUrl} title={lesson.title} /> : lesson.mediaUrl.startsWith("/api/lessons/media/") ? <StoredMedia url={lesson.mediaUrl} type={lesson.type} title={lesson.title} /> : null)}
+                    {lesson.mediaUrl && (
+                      <AuthenticatedMedia src={lesson.mediaUrl} type={lesson.type} title={lesson.title} />
+                    )}
+
                     <p className="text-sm text-muted-foreground line-clamp-3">
                       {lesson.description || "No description provided."}
                     </p>
 
                     <div className="flex items-center justify-between pt-3 border-t">
                       <span className="text-xs text-muted-foreground">
-                        {new Date(lesson.createdAt).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" })}
+                        {new Date(lesson.createdAt).toLocaleDateString("en-ZA", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
                       </span>
                       {lesson.mediaUrl && (
                         <Button
                           size="sm"
-                          variant="default"
+                          variant="outline"
                           className="gap-1.5 h-8 text-xs"
-                          onClick={(e) => { e.stopPropagation(); handleOpen(lesson.mediaUrl!); }}
+                          onClick={() => handleOpen(lesson.mediaUrl!)}
                         >
-                          Open Lesson
+                          Open in new tab
                           <ExternalLink className="h-3 w-3" />
                         </Button>
                       )}
