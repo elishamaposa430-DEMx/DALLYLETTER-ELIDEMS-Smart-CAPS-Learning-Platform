@@ -43,7 +43,7 @@ function normalizeAttachmentUrl(value: unknown): string | null {
 }
 
 router.post("/material", requireAuth, (req, res): void => {
-  if (req.currentUser?.role !== "teacher" && req.currentUser?.role !== "owner") { res.status(403).json({ error: "Teacher or owner access required" }); return; }
+  if (!req.currentUser || !["student", "teacher", "owner"].includes(req.currentUser.role)) { res.status(403).json({ error: "Assignment access required" }); return; }
   materialUpload.single("file")(req, res, (error) => {
     if (error) { res.status(400).json({ error: "A supported material file up to 250 MB is required" }); return; }
     if (!req.file) { res.status(400).json({ error: "A supported material file is required" }); return; }
@@ -154,19 +154,21 @@ router.post("/:id/submit", requireAuth, async (req, res): Promise<void> => {
   if (user.role !== "student") { res.status(403).json({ error: "Forbidden" }); return; }
   const assignmentId = parseInt(String(req.params.id));
   const { content, fileUrl, fileName } = req.body;
-  if (typeof content !== "string" || !content.trim() || content.length > 100000) { res.status(400).json({ error: "content is required and must be at most 100000 characters" }); return; }
+  const normalizedFileUrl = normalizeAttachmentUrl(fileUrl);
+  if (fileUrl != null && normalizedFileUrl == null) { res.status(400).json({ error: "fileUrl must be a valid http(s) URL" }); return; }
+  if ((typeof content !== "string" || content.length > 100000) || (!content.trim() && !normalizedFileUrl)) { res.status(400).json({ error: "content or a fileUrl is required; content must be at most 100000 characters" }); return; }
   const [assignment] = await db.select({ status: assignmentsTable.status, grade: assignmentsTable.grade, dueDate: assignmentsTable.dueDate }).from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId));
   if (!assignment || !isVisibleToStudent(assignment, user.grade)) { res.status(404).json({ error: "Not found" }); return; }
   if (new Date(`${assignment.dueDate}T23:59:59Z`) < new Date()) { res.status(409).json({ error: "This assignment is past its due date" }); return; }
   const [existing] = await db.select().from(assignmentSubmissionsTable)
     .where(and(eq(assignmentSubmissionsTable.assignmentId, assignmentId), eq(assignmentSubmissionsTable.studentId, user.id)));
   if (existing) {
-    const [updated] = await db.update(assignmentSubmissionsTable).set({ content, fileUrl, fileName, status: "submitted" })
+    const [updated] = await db.update(assignmentSubmissionsTable).set({ content: content.trim(), fileUrl: normalizedFileUrl, fileName, status: "submitted" })
       .where(eq(assignmentSubmissionsTable.id, existing.id)).returning();
     res.json(updated); return;
   }
   const [row] = await db.insert(assignmentSubmissionsTable).values({
-    assignmentId, studentId: user.id, studentName: user.name, content: content.trim(), fileUrl, fileName,
+    assignmentId, studentId: user.id, studentName: user.name, content: content.trim(), fileUrl: normalizedFileUrl, fileName,
   }).returning();
   res.status(201).json(row);
 });

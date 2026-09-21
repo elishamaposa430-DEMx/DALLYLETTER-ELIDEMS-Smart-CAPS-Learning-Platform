@@ -10,6 +10,7 @@ import { getListMessagesQueryKey } from "@workspace/api-client-react";
 import { SendMessageBodyType } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
+import { AuthenticatedAudio } from "@/components/AuthenticatedAudio";
 
 export default function Chat() {
   const { user } = useAuth();
@@ -54,10 +55,16 @@ export default function Chat() {
     });
   };
 
-  const handleSendVoice = (dataUrl: string) => {
+  const handleSendVoice = async (audio: Blob) => {
     if (!selectedGroupId) return;
+    const body = new FormData();
+    body.append("file", audio, "voice-message.webm");
+    const token = localStorage.getItem("dallyletter_token");
+    const upload = await fetch("/api/messages/media", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : undefined, body });
+    if (!upload.ok) return;
+    const { mediaUrl } = await upload.json() as { mediaUrl: string };
     sendMessageMutation.mutate({
-      data: { content: "🎤 Voice message", type: SendMessageBodyType.voice, groupId: selectedGroupId, mediaUrl: dataUrl }
+      data: { content: "Voice message", type: SendMessageBodyType.voice, groupId: selectedGroupId, mediaUrl }
     }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListMessagesQueryKey({ groupId: selectedGroupId }) });
@@ -183,7 +190,7 @@ export default function Chat() {
                                 : "bg-card border shadow-sm rounded-tl-sm"
                             }`}>
                               {message.type === "voice" && message.mediaUrl ? (
-                                <audio controls className="h-10 max-w-[200px] sm:max-w-[250px]" src={message.mediaUrl} />
+                                <AuthenticatedAudio className="h-10 max-w-[200px] sm:max-w-[250px]" src={message.mediaUrl} />
                               ) : (
                                 <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
                               )}

@@ -1,6 +1,7 @@
 // Messages routes — group and private chat, including voice notes
 import { Router, type IRouter } from "express";
 import { eq, and, isNull, or, inArray } from "drizzle-orm";
+import multer from "multer";
 import { db, messagesTable, activityLogTable, studyGroupMembersTable, studyGroupsTable, contentFlagsTable, auditLogsTable } from "@workspace/db";
 import {
   ListMessagesQueryParams,
@@ -8,8 +9,20 @@ import {
 } from "@workspace/api-zod";
 import { requireAuth } from "../lib/auth-middleware";
 import { getAIProvider } from "../lib/ai-provider";
+import { createMediaStorageKey, ensureMediaDirectory, getMediaDirectory, isAllowedMediaType, MAX_MEDIA_SIZE_BYTES } from "../lib/media-storage";
 
 const router: IRouter = Router();
+
+const voiceUpload = multer({
+  storage: multer.diskStorage({
+    destination: async (_req, _file, callback) => {
+      try { await ensureMediaDirectory(); callback(null, getMediaDirectory()); } catch (error) { callback(error as Error, ""); }
+    },
+    filename: (_req, _file, callback) => callback(null, createMediaStorageKey()),
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, callback) => callback(null, isAllowedMediaType(file.mimetype) && file.mimetype.startsWith("audio/")),
+});
 
 async function canAccessGroup(groupId: number, userId: number, role: string): Promise<boolean> {
   const [group] = await db.select({ id: studyGroupsTable.id }).from(studyGroupsTable).where(eq(studyGroupsTable.id, groupId));
@@ -20,6 +33,17 @@ async function canAccessGroup(groupId: number, userId: number, role: string): Pr
     .where(and(eq(studyGroupMembersTable.groupId, groupId), eq(studyGroupMembersTable.userId, userId)));
   return Boolean(membership);
 }
+
+router.post("/messages/media", requireAuth, (req, res): void => {
+  voiceUpload.single("file")(req, res, (error) => {
+    if (error || !req.file) { res.status(400).json({ error: "A supported audio file up to 10 MB is required" }); return; }
+    res.status(201).json({
+      mediaUrl: `/api/lessons/media/${req.file.filename}?type=${encodeURIComponent(req.file.mimetype)}`,
+      mimeType: req.file.mimetype,
+      size: req.file.size,
+    });
+  });
+});
 
 // GET /messages — List messages filtered by groupId or recipientId
 router.get("/messages", requireAuth, async (req, res): Promise<void> => {

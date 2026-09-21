@@ -11,6 +11,7 @@ import { SendMessageBodyType } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
+import { AuthenticatedAudio } from "@/components/AuthenticatedAudio";
 
 export default function TeacherChat() {
   const { user } = useAuth();
@@ -48,9 +49,15 @@ export default function TeacherChat() {
     });
   };
 
-  const handleSendVoice = (dataUrl: string) => {
+  const handleSendVoice = async (audio: Blob) => {
+    const body = new FormData();
+    body.append("file", audio, "voice-message.webm");
+    const token = localStorage.getItem("dallyletter_token");
+    const upload = await fetch("/api/messages/media", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : undefined, body });
+    if (!upload.ok) return;
+    const { mediaUrl } = await upload.json() as { mediaUrl: string };
     sendMessageMutation.mutate({
-      data: { content: "🎤 Voice message", type: SendMessageBodyType.voice, groupId: selectedGroupId, recipientId: selectedUserId, mediaUrl: dataUrl }
+      data: { content: "Voice message", type: SendMessageBodyType.voice, groupId: selectedGroupId, recipientId: selectedUserId, mediaUrl }
     }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListMessagesQueryKey({ groupId: selectedGroupId, recipientId: selectedUserId }) });
@@ -181,7 +188,7 @@ export default function TeacherChat() {
                                 : "bg-card border shadow-sm rounded-tl-sm"
                             }`}>
                               {msg.type === "voice" && msg.mediaUrl ? (
-                                <audio controls className="h-10 max-w-[200px] sm:max-w-[250px]" src={msg.mediaUrl} />
+                                <AuthenticatedAudio className="h-10 max-w-[200px] sm:max-w-[250px]" src={msg.mediaUrl} />
                               ) : (
                                 <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                               )}

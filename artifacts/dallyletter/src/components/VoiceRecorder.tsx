@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Mic, Square, Send, Trash2, Loader2 } from "lucide-react";
 
 interface VoiceRecorderProps {
-  onSend: (base64DataUrl: string) => void;
+  onSend: (audio: Blob) => void;
   isSending?: boolean;
 }
 
@@ -76,13 +76,8 @@ export function VoiceRecorder({ onSend, isSending }: VoiceRecorderProps) {
   const sendVoice = async () => {
     if (!audioUrl) return;
     const blob = new Blob(chunksRef.current, { type: mediaRecorderRef.current?.mimeType ?? "audio/webm" });
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const dataUrl = reader.result as string;
-      onSend(dataUrl);
-      discard();
-    };
-    reader.readAsDataURL(blob);
+    onSend(blob);
+    discard();
   };
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
