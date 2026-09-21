@@ -13,6 +13,7 @@ const allowedMimeTypes = new Set([
   "audio/mpeg",
   "audio/mp4",
   "audio/ogg",
+  "audio/webm",
   "audio/wav",
   "image/jpeg",
   "image/png",
@@ -25,7 +26,7 @@ const allowedMimeTypes = new Set([
 export const MAX_MEDIA_SIZE_BYTES = 250 * 1024 * 1024;
 
 export function isAllowedMediaType(mimeType: string): boolean {
-  return allowedMimeTypes.has(mimeType.toLowerCase());
+  return allowedMimeTypes.has(mimeType.split(";", 1)[0].trim().toLowerCase());
 }
 
 export function getMediaDirectory(): string {

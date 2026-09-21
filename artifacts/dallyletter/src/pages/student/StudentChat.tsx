@@ -56,20 +56,20 @@ export default function Chat() {
   };
 
   const handleSendVoice = async (audio: Blob) => {
-    if (!selectedGroupId) return;
+    if (!selectedGroupId) throw new Error("Select a study group before sending a voice message.");
     const body = new FormData();
     body.append("file", audio, "voice-message.webm");
     const token = localStorage.getItem("dallyletter_token");
     const upload = await fetch("/api/messages/media", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : undefined, body });
-    if (!upload.ok) return;
+    if (!upload.ok) {
+      const result = await upload.json().catch(() => null) as { error?: string } | null;
+      throw new Error(result?.error ?? "Voice upload failed.");
+    }
     const { mediaUrl } = await upload.json() as { mediaUrl: string };
-    sendMessageMutation.mutate({
+    await sendMessageMutation.mutateAsync({
       data: { content: "Voice message", type: SendMessageBodyType.voice, groupId: selectedGroupId, mediaUrl }
-    }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListMessagesQueryKey({ groupId: selectedGroupId }) });
-      }
     });
+    await queryClient.invalidateQueries({ queryKey: getListMessagesQueryKey({ groupId: selectedGroupId }) });
   };
 
   const handleReport = async (messageId: number) => {

@@ -54,15 +54,16 @@ export default function TeacherChat() {
     body.append("file", audio, "voice-message.webm");
     const token = localStorage.getItem("dallyletter_token");
     const upload = await fetch("/api/messages/media", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : undefined, body });
-    if (!upload.ok) return;
+    if (!upload.ok) {
+      const result = await upload.json().catch(() => null) as { error?: string } | null;
+      throw new Error(result?.error ?? "Voice upload failed.");
+    }
     const { mediaUrl } = await upload.json() as { mediaUrl: string };
-    sendMessageMutation.mutate({
+    if (!selectedGroupId && !selectedUserId) throw new Error("Select a conversation before sending a voice message.");
+    await sendMessageMutation.mutateAsync({
       data: { content: "Voice message", type: SendMessageBodyType.voice, groupId: selectedGroupId, recipientId: selectedUserId, mediaUrl }
-    }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListMessagesQueryKey({ groupId: selectedGroupId, recipientId: selectedUserId }) });
-      }
     });
+    await queryClient.invalidateQueries({ queryKey: getListMessagesQueryKey({ groupId: selectedGroupId, recipientId: selectedUserId }) });
   };
 
   const selectGroup = (id: number) => { setSelectedGroupId(id); setSelectedUserId(null); };
