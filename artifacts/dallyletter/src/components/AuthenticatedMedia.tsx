@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { resolveBaseUrl } from "@workspace/api-client-react";
 
 interface AuthenticatedMediaProps {
   src: string;
@@ -24,7 +25,7 @@ export function AuthenticatedMedia({ src, type, title }: AuthenticatedMediaProps
 
     let active = true;
     const token = localStorage.getItem("dallyletter_token");
-    fetch(src, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
+    fetch(resolveBaseUrl(src), { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
       .then((response) => {
         if (!response.ok) throw new Error("Media unavailable");
         return response.blob();

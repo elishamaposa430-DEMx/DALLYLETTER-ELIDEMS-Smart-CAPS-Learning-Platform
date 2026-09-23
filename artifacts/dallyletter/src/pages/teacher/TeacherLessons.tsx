@@ -1,5 +1,5 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { useListLessons, useCreateLesson, useDeleteLesson } from "@workspace/api-client-react";
+import { resolveBaseUrl, useListLessons, useCreateLesson, useDeleteLesson } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,7 +78,7 @@ export default function TeacherLessons() {
     setUploadedFile({ name: file.name, previewUrl, mimeType: file.type });
     setUploadProgress(0);
     const request = new XMLHttpRequest();
-    request.open("POST", "/api/lessons/media");
+    request.open("POST", resolveBaseUrl("/api/lessons/media"));
     const token = localStorage.getItem("dallyletter_token");
     if (token) request.setRequestHeader("Authorization", `Bearer ${token}`);
     request.upload.onprogress = (event) => {

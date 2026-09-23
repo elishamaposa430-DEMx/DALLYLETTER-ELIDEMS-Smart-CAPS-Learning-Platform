@@ -34,6 +34,11 @@ export function setBaseUrl(url: string | null): void {
   _baseUrl = url ? url.replace(/\/+$/, "") : null;
 }
 
+export function resolveBaseUrl(url: string): string {
+  if (!_baseUrl || !url.startsWith("/")) return url;
+  return `${_baseUrl}${url}`;
+}
+
 /**
  * Register a getter that supplies a bearer auth token.  Before every fetch
  * the getter is invoked; when it returns a non-null string, an
@@ -66,12 +71,11 @@ function isUrl(input: RequestInfo | URL): input is URL {
 }
 
 function applyBaseUrl(input: RequestInfo | URL): RequestInfo | URL {
-  if (!_baseUrl) return input;
   const url = resolveUrl(input);
   // Only prepend to relative paths (starting with /)
-  if (!url.startsWith("/")) return input;
+  const absolute = resolveBaseUrl(url);
+  if (absolute === url) return input;
 
-  const absolute = `${_baseUrl}${url}`;
   if (typeof input === "string") return absolute;
   if (isUrl(input)) return new URL(absolute);
   return new Request(absolute, input as Request);
